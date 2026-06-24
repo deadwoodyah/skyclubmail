@@ -289,13 +289,38 @@ const server = http.createServer(async (req, res) => {
       const to = (body.to || '').toLowerCase();
       const from = body.from || 'unknown@unknown.com';
       const subject = body.subject || '(No Subject)';
-      const text = body.text || '';
-      const html = body.html || '';
+      let text = body.text || '';
+      let html = body.html || '';
       const date = body.date || new Date().toISOString();
       const attachments = body.attachments || [];
 
       if (!to) {
         return sendJSON(res, { error: 'Missing "to" field' }, 400);
+      }
+
+      // Decode quoted-printable if still encoded
+      function decodeQP(str) {
+        return str.replace(/=\r?\n/g, '').replace(/=([0-9A-Fa-f]{2})/g, function(m, hex) {
+          return String.fromCharCode(parseInt(hex, 16));
+        });
+      }
+
+      // Check if text/html still has QP encoding
+      if (text.indexOf('=C2=A0') > -1 || text.indexOf('=3D') > -1 || text.indexOf('=\n') > -1) {
+        text = decodeQP(text);
+      }
+      if (html.indexOf('=C2=A0') > -1 || html.indexOf('=3D') > -1 || html.indexOf('=\n') > -1) {
+        html = decodeQP(html);
+      }
+
+      // Remove MIME boundary leftovers from text
+      text = text.replace(/------=_Part_[\s\S]*/g, '').trim();
+      // Clean non-breaking spaces
+      text = text.replace(/\xC2\xA0/g, ' ').replace(/\u00A0/g, ' ');
+
+      // If text is empty but html exists, extract text from html
+      if (!text && html) {
+        text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
       }
 
       // If there are image attachments, embed them in HTML
