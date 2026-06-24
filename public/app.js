@@ -245,18 +245,49 @@ function showEmailBody(tab) {
     }
   } else if (tab === 'text') {
     elements.emailBody.style.whiteSpace = 'pre-wrap';
-    // Clean text: remove encoding artifacts
-    var text = currentEmailData.body || '(No text content)';
+    var text = currentEmailData.body || '';
+    // Decode quoted-printable
     text = text.replace(/=\r?\n/g, '');
     text = text.replace(/=([0-9A-Fa-f]{2})/g, function(m, hex) {
       return String.fromCharCode(parseInt(hex, 16));
     });
+    // Remove MIME boundaries
+    text = text.replace(/------=_Part_[\s\S]*/g, '');
+    text = text.replace(/--[a-zA-Z0-9_=-]+--?\s*$/gm, '');
+    // Remove Content-Type/Content-Transfer lines
+    text = text.replace(/Content-Type:.*[\r\n]*/gi, '');
+    text = text.replace(/Content-Transfer-Encoding:.*[\r\n]*/gi, '');
+    // Clean unicode spaces
+    text = text.replace(/\u00A0/g, ' ');
+    text = text.replace(/\xC2\xA0/g, ' ');
+    // Clean extra whitespace
     text = text.replace(/\r\n/g, '\n');
+    text = text.replace(/\n{3,}/g, '\n\n');
+    text = text.trim();
+    if (!text) {
+      // Fallback: extract from HTML
+      if (currentEmailData.html) {
+        text = currentEmailData.html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+      } else {
+        text = '(No text content)';
+      }
+    }
     elements.emailBody.textContent = text;
   } else {
     elements.emailBody.style.whiteSpace = 'pre-wrap';
-    elements.emailBody.textContent = 
-      'From: ' + currentEmailData.from + '\nTo: ' + currentEmailData.to + '\nSubject: ' + currentEmailData.subject + '\nDate: ' + currentEmailData.date + '\n\n' + (currentEmailData.body || '');
+    var source = 'From: ' + currentEmailData.from + '\n';
+    source += 'To: ' + currentEmailData.to + '\n';
+    source += 'Subject: ' + currentEmailData.subject + '\n';
+    source += 'Date: ' + currentEmailData.date + '\n';
+    source += '\n--- Body ---\n\n';
+    // For source, extract clean text from HTML if available
+    if (currentEmailData.html) {
+      var cleanText = currentEmailData.html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
+      source += cleanText;
+    } else {
+      source += currentEmailData.body || '';
+    }
+    elements.emailBody.textContent = source;
   }
 }
 
