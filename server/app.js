@@ -1,6 +1,6 @@
 /**
- * Temp Mail - Main Application
- * Web server + SMTP server
+ * RichMail - Main Application
+ * Web server + Email webhook receiver
  */
 
 const http = require('http');
@@ -9,7 +9,6 @@ const path = require('path');
 const url = require('url');
 const config = require('../config');
 const db = require('./database');
-const SMTPServer = require('./smtp');
 
 // MIME types
 const MIME_TYPES = {
@@ -37,11 +36,23 @@ function parseBody(req) {
   });
 }
 
+// Parse raw body (for email content)
+function parseRawBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => resolve(body));
+    req.on('error', reject);
+  });
+}
+
 // Send JSON response
 function sendJSON(res, data, status = 200) {
   res.writeHead(status, { 
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Webhook-Secret'
   });
   res.end(JSON.stringify(data));
 }
@@ -56,6 +67,12 @@ function generateUsername() {
   return `${adj}.${noun}${num}`;
 }
 
+// Verify webhook secret
+function verifyWebhook(req) {
+  const secret = req.headers['x-webhook-secret'] || '';
+  return secret === config.WEBHOOK_SECRET;
+}
+
 // Create HTTP server
 const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
@@ -67,7 +84,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Webhook-Secret'
     });
     res.end();
     return;
@@ -147,12 +164,60 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/config' && method === 'GET') {
       return sendJSON(res, {
         domains: config.DOMAINS,
-        expiryMinutes: config.EMAIL_EXPIRY_MINUTES,
-        smtpPort: config.SMTP_PORT
+        expiryMinutes: config.EMAIL_EXPIRY_MINUTES
       });
     }
 
     return sendJSON(res, { error: 'Not Found' }, 404);
+  }
+
+  // ==========================================
+  // WEBHOOK: Receive email from Cloudflare
+  // POST /webhook/email
+  // ==========================================
+  if (pathname === '/webhook/email' && method === 'POST') {
+    // Verify webhook secret
+    if (!verifyWebhook(req)) {
+      console.log('[WEBHOOK] Unauthorized request');
+      return sendJSON(res, { error: 'Unauthorized' }, 401);
+    }
+
+    try {
+      const body = await parseBody(req);
+      
+      const to = (body.to || '').toLowerCase();
+      const from = body.from || 'unknown@unknown.com';
+      const subject = body.subject || '(No Subject)';
+      const text = body.text || '';
+      const html = body.html || '';
+      const date = body.date || new Date().toISOString();
+
+      if (!to) {
+        return sendJSON(res, { error: 'Missing "to" field' }, 400);
+      }
+
+      // Save email
+      db.getOrCreateMailbox(to);
+      const saved = db.saveEmail({
+        to: to,
+        from: from,
+        subject: subject,
+        body: text,
+        html: html,
+        date: date
+      });
+
+      console.log(`[WEBHOOK] Email received: ${from} -> ${to} | Subject: ${subject}`);
+      return sendJSON(res, { success: true, id: saved.id });
+    } catch (e) {
+      console.error('[WEBHOOK] Error:', e.message);
+      return sendJSON(res, { error: 'Internal error' }, 500);
+    }
+  }
+
+  // Health check
+  if (pathname === '/health') {
+    return sendJSON(res, { status: 'ok', uptime: process.uptime() });
   }
 
   // Serve static files
@@ -186,17 +251,15 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-// Start servers
-server.listen(config.WEB_PORT, config.WEB_HOST, () => {
+// Start server
+const PORT = config.WEB_PORT;
+server.listen(PORT, config.WEB_HOST, () => {
   console.log('='.repeat(50));
-  console.log('  TEMP MAIL - Disposable Email Service');
+  console.log('  RICHMAIL - Disposable Email Service');
   console.log('='.repeat(50));
-  console.log(`  Web Interface: http://localhost:${config.WEB_PORT}`);
+  console.log(`  Web Interface: http://localhost:${PORT}`);
+  console.log(`  Webhook: http://localhost:${PORT}/webhook/email`);
   console.log(`  Domains: ${config.DOMAINS.join(', ')}`);
   console.log(`  Email Expiry: ${config.EMAIL_EXPIRY_MINUTES} minutes`);
   console.log('='.repeat(50));
 });
-
-// Start SMTP server
-const smtp = new SMTPServer();
-smtp.start();

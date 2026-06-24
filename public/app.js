@@ -1,5 +1,5 @@
 /**
- * TempMail Frontend Application
+ * RichMail Frontend Application
  */
 
 // State
@@ -34,7 +34,6 @@ const elements = {
   tabHtml: document.getElementById('tabHtml'),
   tabSource: document.getElementById('tabSource'),
   activeDomains: document.getElementById('activeDomains'),
-  smtpPort: document.getElementById('smtpPort'),
   emailExpiry: document.getElementById('emailExpiry')
 };
 
@@ -100,7 +99,6 @@ async function loadConfig() {
   const data = await api('/config');
   if (data) {
     elements.activeDomains.textContent = data.domains.join(', ');
-    elements.smtpPort.textContent = data.smtpPort;
     elements.emailExpiry.textContent = data.expiryMinutes;
   }
 }
