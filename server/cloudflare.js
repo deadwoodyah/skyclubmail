@@ -131,39 +131,30 @@ async function addEmailMXRecords(zoneId, domain) {
 
 // Enable Email Routing for zone
 async function enableEmailRouting(zoneId) {
-  const res = await cfRequest('POST', '/zones/' + zoneId + '/email/routing/enable');
-  return res.success || (res.errors && res.errors[0] && res.errors[0].message.includes('already'));
+  // The correct endpoint is POST /zones/{zone_id}/email/routing/dns
+  const res = await cfRequest('POST', '/zones/' + zoneId + '/email/routing/dns');
+  if (res.success) return true;
+  // Try alternative endpoint
+  const res2 = await cfRequest('POST', '/zones/' + zoneId + '/email/routing/enable');
+  return res2.success || (res2.errors && res2.errors[0] && res2.errors[0].message.includes('already'));
 }
 
 // Create catch-all rule to forward to webhook
 async function createCatchAllRule(zoneId) {
-  // First check existing rules
-  const existing = await cfRequest('GET', '/zones/' + zoneId + '/email/routing/rules');
-  
-  // Look for catch-all and update or create
-  if (existing.success && existing.result) {
-    for (const rule of existing.result) {
-      if (rule.matchers && rule.matchers[0] && rule.matchers[0].type === 'all') {
-        // Update existing catch-all to forward to worker
-        await cfRequest('PUT', '/zones/' + zoneId + '/email/routing/rules/' + rule.id, {
-          matchers: [{ type: 'all' }],
-          actions: [{ type: 'worker', value: ['richmail-worker'] }],
-          enabled: true,
-          name: 'RichMail Catch-All'
-        });
-        return true;
-      }
-    }
-  }
-
-  // Create new catch-all rule
-  const res = await cfRequest('POST', '/zones/' + zoneId + '/email/routing/rules', {
+  // Use the dedicated catch-all endpoint
+  // PUT /zones/{zone_id}/email/routing/rules/catch_all
+  const res = await cfRequest('PUT', '/zones/' + zoneId + '/email/routing/rules/catch_all', {
     matchers: [{ type: 'all' }],
     actions: [{ type: 'worker', value: ['richmail-worker'] }],
-    enabled: true,
-    name: 'RichMail Catch-All'
+    enabled: true
   });
-  return res.success;
+  
+  if (res.success) return true;
+
+  // If worker action fails, try with drop (at least enable catch-all)
+  // User will need to manually set worker in Cloudflare
+  console.log('[CF] Catch-all worker setup result:', JSON.stringify(res.errors || []));
+  return false;
 }
 
 // Full auto-setup for a new domain
@@ -200,11 +191,17 @@ async function setupDomain(domain) {
   steps.push({ step: 'Mengaktifkan Email Routing...', status: 'working' });
   const routingOk = await enableEmailRouting(zoneId);
   steps[2].status = routingOk ? 'done' : 'warning';
+  if (!routingOk) {
+    steps[2].info = 'Mungkin perlu enable manual di Cloudflare';
+  }
 
   // Step 4: Create catch-all rule
-  steps.push({ step: 'Membuat routing rule...', status: 'working' });
+  steps.push({ step: 'Membuat catch-all routing rule...', status: 'working' });
   const ruleOk = await createCatchAllRule(zoneId);
   steps[3].status = ruleOk ? 'done' : 'warning';
+  if (!ruleOk) {
+    steps[3].info = 'Set catch-all ke Worker manual di Cloudflare';
+  }
 
   return {
     success: true,
