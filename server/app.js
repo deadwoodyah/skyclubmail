@@ -325,6 +325,13 @@ const server = http.createServer(async (req, res) => {
 
       // If there are image attachments, embed them in HTML
       let finalHtml = html;
+
+      // Remove broken CID image references that have no data
+      finalHtml = finalHtml.replace(/<img[^>]*src=["']cid:[^"']*["'][^>]*>/gi, '');
+      
+      // Remove any remaining broken image tags with empty or invalid src
+      finalHtml = finalHtml.replace(/<img[^>]*src=["'](?!data:|https?:\/\/)[^"']*["'][^>]*>/gi, '');
+
       if (attachments.length > 0) {
         let imgHtml = '';
         attachments.forEach(att => {
