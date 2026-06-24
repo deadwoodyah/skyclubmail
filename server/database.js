@@ -178,6 +178,13 @@ function getStats() {
   const totalMailboxes = db.mailboxes.length;
   const unreadEmails = db.emails.filter(e => !e.read).length;
   
+  // Today's emails
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayEmails = db.emails.filter(e => {
+    return new Date(e.date) >= today;
+  }).length;
+
   // Per domain stats
   const domainStats = domains.map(domain => {
     const emails = db.emails.filter(e => e.to.endsWith('@' + domain));
@@ -193,6 +200,7 @@ function getStats() {
     totalEmails,
     totalMailboxes,
     unreadEmails,
+    todayEmails,
     domains: domainStats
   };
 }
