@@ -20,6 +20,10 @@ module.exports = {
   // Admin panel password
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
 
+  // Cloudflare API (for auto domain setup)
+  CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN || '',
+  CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID || '',
+
   // Email settings
   EMAIL_EXPIRY_MINUTES: parseInt(process.env.EMAIL_EXPIRY || '60'),
 

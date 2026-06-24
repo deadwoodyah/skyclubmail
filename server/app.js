@@ -9,6 +9,7 @@ const path = require('path');
 const url = require('url');
 const config = require('../config');
 const db = require('./database');
+const cloudflare = require('./cloudflare');
 
 // MIME types
 const MIME_TYPES = {
@@ -225,6 +226,37 @@ const server = http.createServer(async (req, res) => {
       }
       const domains = db.removeDomain(domain);
       return sendJSON(res, { success: true, domains });
+    }
+
+    // POST /admin/api/domains/auto-setup - Auto setup domain via Cloudflare
+    if (pathname === '/admin/api/domains/auto-setup' && method === 'POST') {
+      const body = await parseBody(req);
+      if (!body.domain) {
+        return sendJSON(res, { error: 'Domain is required' }, 400);
+      }
+      const domain = body.domain.toLowerCase().trim();
+      if (!/^[a-z0-9][a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
+        return sendJSON(res, { error: 'Format domain tidak valid' }, 400);
+      }
+
+      if (!cloudflare.isConfigured()) {
+        return sendJSON(res, { error: 'Cloudflare API belum dikonfigurasi. Set CLOUDFLARE_API_TOKEN dan CLOUDFLARE_ACCOUNT_ID di environment.' }, 400);
+      }
+
+      console.log('[ADMIN] Auto-setup domain:', domain);
+      const result = await cloudflare.setupDomain(domain);
+      
+      if (result.success) {
+        // Add to local domain list
+        db.addDomain(domain);
+      }
+
+      return sendJSON(res, result);
+    }
+
+    // GET /admin/api/cloudflare-status - Check if Cloudflare API is configured
+    if (pathname === '/admin/api/cloudflare-status' && method === 'GET') {
+      return sendJSON(res, { configured: cloudflare.isConfigured() });
     }
 
     // GET /admin/api/config - Get full config

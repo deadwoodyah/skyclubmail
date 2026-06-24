@@ -110,33 +110,30 @@
         <div id="domainList" class="domain-list"></div>
         <div class="add-domain">
           <input type="text" id="newDomain" placeholder="contoh: mydomain.com">
-          <button onclick="addDomain()">+ Tambah</button>
+          <button onclick="autoSetupDomain()">+ Tambah & Auto Setup</button>
+        </div>
+        <div id="setupProgress" style="display:none; margin-top:15px;">
+          <div class="info-box" id="setupLog"></div>
+        </div>
+        <div id="nameserverInfo" style="display:none; margin-top:15px;" class="info-box">
+          <p style="color:#e94560;"><strong>&#9888; PENTING:</strong></p>
+          <p>Ganti nameserver domain Anda ke:</p>
+          <p id="nsValues" style="color:#27ae60; font-weight:bold;"></p>
+          <p style="margin-top:8px; font-size:0.85em; color:#888;">Ganti di panel tempat Anda beli domain (Jagoan Hosting/Namecheap/dll). Setelah diganti, tunggu 5-30 menit.</p>
         </div>
       </div>
 
       <!-- Setup Guide -->
       <div class="section">
-        <h2>&#128218; Panduan Setup Domain Baru</h2>
+        <h2>&#128218; Cara Kerja</h2>
         <div class="guide-step">
-          <strong>Step 1:</strong> Tambah domain di atas
+          <strong>Otomatis:</strong> Ketik domain → klik Tambah → App akan otomatis setup Cloudflare (MX record, Email Routing, dll)
         </div>
         <div class="guide-step">
-          <strong>Step 2:</strong> Buka Cloudflare → Add Site → masukkan domain baru → pilih Free
+          <strong>Manual (hanya sekali):</strong> Ganti nameserver domain ke Cloudflare di panel registrar
         </div>
         <div class="guide-step">
-          <strong>Step 3:</strong> Ganti nameserver domain ke Cloudflare (di panel registrar)
-        </div>
-        <div class="guide-step">
-          <strong>Step 4:</strong> Aktifkan Email Routing → Enable
-        </div>
-        <div class="guide-step">
-          <strong>Step 5:</strong> Email Workers → Buat worker baru (copy code dari worker sebelumnya)
-        </div>
-        <div class="guide-step">
-          <strong>Step 6:</strong> Routing rules → Catch-all → Send to Worker
-        </div>
-        <div class="guide-step">
-          <strong>&#9989; Selesai!</strong> Domain baru bisa terima email di RichMail
+          <strong>&#9989; Selesai!</strong> Domain langsung bisa terima email
         </div>
       </div>
 
@@ -154,11 +151,7 @@
 
   <script>
     var token = localStorage.getItem('richmail_admin_token') || '';
-
-    // Auto-login if token exists
-    if (token) {
-      showPanel();
-    }
+    if (token) { showPanel(); }
 
     function toast(msg, type) {
       var t = document.createElement('div');
@@ -228,8 +221,7 @@
         data.domains.forEach(function(domain) {
           var item = document.createElement('div');
           item.className = 'domain-item';
-          item.innerHTML = '<div><span class="domain-name">' + domain + '</span></div>' +
-            '<button onclick="removeDomain(\'' + domain + '\')">Hapus</button>';
+          item.innerHTML = '<div><span class="domain-name">' + domain + '</span></div><button onclick="removeDomain(\'' + domain + '\')">Hapus</button>';
           list.appendChild(item);
         });
       }
@@ -244,32 +236,50 @@
       }
     }
 
-    async function addDomain() {
+    async function autoSetupDomain() {
       var input = document.getElementById('newDomain');
       var domain = input.value.trim().toLowerCase();
       if (!domain) { toast('Masukkan domain!', 'error'); return; }
       if (!/^[a-z0-9][a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
         toast('Format domain tidak valid!', 'error'); return;
       }
-      var data = await api('/admin/api/domains', {
+      var progress = document.getElementById('setupProgress');
+      var log = document.getElementById('setupLog');
+      var nsInfo = document.getElementById('nameserverInfo');
+      progress.style.display = 'block';
+      nsInfo.style.display = 'none';
+      log.innerHTML = '<p>&#9203; Menyiapkan domain ' + domain + '...</p>';
+      var data = await api('/admin/api/domains/auto-setup', {
         method: 'POST',
         body: JSON.stringify({ domain: domain })
       });
       if (data && data.success) {
-        toast('Domain ' + domain + ' ditambahkan!');
+        var html = '';
+        if (data.steps) {
+          data.steps.forEach(function(s) {
+            var icon = s.status === 'done' ? '&#9989;' : s.status === 'warning' ? '&#9888;' : '&#10060;';
+            html += '<p>' + icon + ' ' + s.step + (s.info ? ' (' + s.info + ')' : '') + '</p>';
+          });
+        }
+        html += '<p style="color:#27ae60;margin-top:10px"><strong>&#9989; ' + (data.message || 'Berhasil!') + '</strong></p>';
+        log.innerHTML = html;
+        if (data.nameservers && data.nameservers.length > 0) {
+          nsInfo.style.display = 'block';
+          document.getElementById('nsValues').textContent = data.nameservers.join('\n');
+        }
+        toast('Domain ' + domain + ' berhasil di-setup!');
         input.value = '';
         loadDomains();
         loadStats();
       } else {
-        toast(data.error || 'Gagal menambah domain', 'error');
+        log.innerHTML = '<p style="color:#e74c3c">&#10060; Gagal: ' + (data.error || 'Unknown error') + '</p>';
+        toast(data.error || 'Gagal setup domain', 'error');
       }
     }
 
     async function removeDomain(domain) {
       if (!confirm('Hapus domain ' + domain + '?')) return;
-      var data = await api('/admin/api/domains?domain=' + encodeURIComponent(domain), {
-        method: 'DELETE'
-      });
+      var data = await api('/admin/api/domains?domain=' + encodeURIComponent(domain), { method: 'DELETE' });
       if (data && data.success) {
         toast('Domain ' + domain + ' dihapus!');
         loadDomains();
@@ -279,9 +289,8 @@
       }
     }
 
-    // Enter key on domain input
     document.getElementById('newDomain').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') addDomain();
+      if (e.key === 'Enter') autoSetupDomain();
     });
   </script>
 </body>
