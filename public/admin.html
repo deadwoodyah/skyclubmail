@@ -221,7 +221,7 @@
         data.domains.forEach(function(domain) {
           var item = document.createElement('div');
           item.className = 'domain-item';
-          item.innerHTML = '<div><span class="domain-name">' + domain + '</span></div><button onclick="removeDomain(\'' + domain + '\')">Hapus</button>';
+          item.innerHTML = '<div><span class="domain-name">' + domain + '</span></div><div><button onclick="reSetupDomain(\'' + domain + '\')" style="margin-right:5px;background:#3498db;border-color:#3498db">Re-setup</button><button onclick="removeDomain(\'' + domain + '\')">Hapus</button></div>';
           list.appendChild(item);
         });
       }
@@ -286,6 +286,38 @@
         loadStats();
       } else {
         toast(data.error || 'Gagal menghapus', 'error');
+      }
+    }
+
+    async function reSetupDomain(domain) {
+      var progress = document.getElementById('setupProgress');
+      var log = document.getElementById('setupLog');
+      var nsInfo = document.getElementById('nameserverInfo');
+      progress.style.display = 'block';
+      nsInfo.style.display = 'none';
+      log.innerHTML = '<p>&#9203; Re-setup domain ' + domain + '...</p>';
+      var data = await api('/admin/api/domains/auto-setup', {
+        method: 'POST',
+        body: JSON.stringify({ domain: domain })
+      });
+      if (data && data.success) {
+        var html = '';
+        if (data.steps) {
+          data.steps.forEach(function(s) {
+            var icon = s.status === 'done' ? '&#9989;' : s.status === 'warning' ? '&#9888;' : '&#10060;';
+            html += '<p>' + icon + ' ' + s.step + (s.info ? ' (' + s.info + ')' : '') + '</p>';
+          });
+        }
+        html += '<p style="color:#27ae60;margin-top:10px"><strong>&#9989; ' + (data.message || 'Berhasil!') + '</strong></p>';
+        log.innerHTML = html;
+        if (data.nameservers && data.nameservers.length > 0) {
+          nsInfo.style.display = 'block';
+          document.getElementById('nsValues').textContent = data.nameservers.join('\n');
+        }
+        toast('Re-setup ' + domain + ' berhasil!');
+      } else {
+        log.innerHTML = '<p style="color:#e74c3c">&#10060; Gagal: ' + (data.error || 'Unknown error') + '</p>';
+        toast(data.error || 'Gagal re-setup', 'error');
       }
     }
 
