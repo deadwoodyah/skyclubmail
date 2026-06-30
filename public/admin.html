@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RichMail - Admin Panel</title>
+  <title>SkyClub - Admin Panel</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1a1a2e; color: #eee; line-height: 1.6; }
@@ -76,7 +76,7 @@
       <button class="logout-btn" onclick="logout()">Logout</button>
       
       <div class="header">
-        <h1>&#9881; RichMail Admin</h1>
+        <h1>&#9881; SkyClub Admin</h1>
         <p>Kelola domain dan lihat statistik</p>
       </div>
 
@@ -162,13 +162,13 @@
           1. Masih di halaman Email Routing, klik tab <strong>"Routing rules"</strong><br>
           2. Di bagian <strong>"Catch-all address"</strong> → klik <strong>Edit</strong><br>
           3. Ubah Action menjadi: <strong>"Send to a Worker"</strong><br>
-          4. Pilih worker: <strong>richmail-worker</strong><br>
+          4. Pilih worker: <strong>skyclub-worker</strong><br>
           5. Klik <strong>Save</strong><br>
-          <span style="color:#888">Ini supaya semua email yang masuk diteruskan ke RichMail.</span>
+          <span style="color:#888">Ini supaya semua email yang masuk diteruskan ke SkyClub.</span>
         </div>
         <div class="guide-step" style="border-left-color:#27ae60">
           <strong>&#127881; Selesai!</strong><br>
-          Sekarang semua email ke @domainbaru.com akan masuk ke RichMail.<br>
+          Sekarang semua email ke @domainbaru.com akan masuk ke SkyClub.<br>
           Buka halaman utama → generate/buat alamat email dengan domain baru → kirim test email dari Gmail.
         </div>
       </div>
@@ -186,7 +186,7 @@
   </div>
 
   <script>
-    var token = localStorage.getItem('richmail_admin_token') || '';
+    var token = localStorage.getItem('skyclub_admin_token') || '';
     if (token) { showPanel(); }
 
     function toast(msg, type) {
@@ -216,7 +216,7 @@
       var data = await res.json();
       if (data.success) {
         token = data.token;
-        localStorage.setItem('richmail_admin_token', token);
+        localStorage.setItem('skyclub_admin_token', token);
         showPanel();
         toast('Login berhasil!');
       } else {
@@ -226,7 +226,7 @@
 
     function logout() {
       token = '';
-      localStorage.removeItem('richmail_admin_token');
+      localStorage.removeItem('skyclub_admin_token');
       document.getElementById('loginScreen').style.display = 'block';
       document.getElementById('adminPanel').classList.remove('active');
     }
@@ -253,7 +253,7 @@
         if (data.domains && data.domains.length > 0) {
           var html = '';
           data.domains.forEach(function(d) {
-            html += '<div class="domain-item"><div><span class="domain-name">' + d.domain + '</span><br><span style="color:#888;font-size:0.8em">' + d.mailboxes + ' mailbox</span></div><div style="text-align:right"><span style="color:#e94560;font-size:1.3em;font-weight:bold">' + d.emails + '</span><br><span style="color:#888;font-size:0.8em">email</span></div></div>';
+            html += '<div class="domain-item"><div><span class="domain-name">' + d.domain + '</span><br><span style="color:#888;font-size:0.8em">' + d.mailboxes + ' mailbox</span></div><div style[...]
           });
           statsDiv.innerHTML = html;
         } else {
@@ -270,7 +270,7 @@
         data.domains.forEach(function(domain) {
           var item = document.createElement('div');
           item.className = 'domain-item';
-          item.innerHTML = '<div><span class="domain-name">' + domain + '</span></div><div><button onclick="reSetupDomain(\'' + domain + '\')" style="margin-right:5px;background:#3498db;border-color:#3498db">Re-setup</button><button onclick="removeDomain(\'' + domain + '\')">Hapus</button></div>';
+          item.innerHTML = '<div><span class="domain-name">' + domain + '</span></div><div><button onclick="reSetupDomain(\'' + domain + '\')" style="margin-right:5px;background:#3498db;border-co[...]
           list.appendChild(item);
         });
       }
