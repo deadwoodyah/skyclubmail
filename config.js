@@ -1,5 +1,5 @@
 /**
- * Configuration for RichMail
+ * Configuration for SkyClub
  * 
  * Deploy: Render.com (free) + Cloudflare Email Routing
  */
