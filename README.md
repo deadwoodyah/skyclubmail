@@ -1,4 +1,4 @@
-# RichMail - Disposable Email Service
+# SkyClub - Disposable Email Service
 
 Aplikasi email sementara (temporary/disposable email) dengan dukungan **custom domain**. Terima email sungguhan dari Gmail, Yahoo, Outlook, dll langsung ke inbox web Anda.
 
@@ -62,7 +62,7 @@ Cloudflare Email Worker (meneruskan email ke app)
         │
         ▼ POST /webhook/email (dengan secret key)
         │
-RichMail App di Render.com (menyimpan & menampilkan)
+SkyClub App di Render.com (menyimpan & menampilkan)
         │
         ▼
 Anda buka web → baca email di inbox
@@ -86,12 +86,12 @@ Anda buka web → baca email di inbox
 1. Buka [render.com](https://render.com)
 2. Klik **"Get Started for Free"** → **Sign up with GitHub** (gratis, tanpa kartu)
 3. Setelah login, klik **"New +"** → **"Web Service"**
-4. Cari dan pilih repository **Richmail** yang sudah di-fork → klik **"Connect"**
+4. Cari dan pilih repository **skyclubmail** yang sudah di-fork → klik **"Connect"**
 5. Isi settings:
 
 | Field | Value |
 |-------|-------|
-| Name | `richmail` (atau nama bebas) |
+| Name | `skyclubmail` (atau nama bebas) |
 | Region | Singapore (Southeast Asia) |
 | Branch | `main` |
 | Runtime | **Node** |
@@ -210,7 +210,7 @@ Klik **"Save Changes"**.
 2. Menu kiri → klik **"Email"** → **"Email Routing"**
 3. Klik tab **"Email Workers"** (di samping tab "Routing rules")
 4. Klik tombol **"Create"**
-5. Di kolom nama, ketik: `richmail-worker`
+5. Di kolom nama, ketik: `skyclub-worker`
 6. Anda akan melihat editor code. **Hapus semua code** yang ada di editor
 7. **Copy code di bawah** (EDIT 2 baris yang ditandai dulu sebelum paste):
 
@@ -304,7 +304,7 @@ export default {
 6. Klik **"Save and Deploy"**
 
 > **PENTING:** 
-> - Ganti `NAMA-APP-ANDA` dengan nama app Anda di Render (contoh: `richmail`)
+> - Ganti `NAMA-APP-ANDA` dengan nama app Anda di Render (contoh: `skyclubmail`)
 > - Ganti `WEBHOOK_SECRET_ANDA` dengan secret yang sama persis dengan di Render Environment
 > - Worker ini hanya dibuat **1 kali**. Domain baru TIDAK perlu buat worker lagi.
 
@@ -317,7 +317,7 @@ export default {
 3. Cari bagian **"Catch-all address"** — biasanya di paling bawah
 4. Klik tombol **"Edit"** di sebelah kanannya
 5. Di dropdown **"Action"**, pilih: **"Send to a Worker"**
-6. Di dropdown yang muncul di bawahnya, pilih: **richmail-worker**
+6. Di dropdown yang muncul di bawahnya, pilih: **skyclub-worker**
 7. Pastikan status **"Active"** (toggle hijau)
 8. Klik **"Save"**
 
@@ -334,7 +334,7 @@ Ini hanya diperlukan kalau Anda mau **tambah domain baru langsung dari admin pan
 2. Klik **"Create Token"**
 3. Scroll ke bawah → klik **"Get started"** (di bawah "Custom token")
 4. Isi:
-   - **Token name:** `RichMail` (atau nama bebas)
+   - **Token name:** `SkyClub` (atau nama bebas)
    - **Permissions** (klik "+ Add more" untuk tambah baris):
      | Kolom Kiri | Kolom Tengah | Kolom Kanan |
      |---|---|---|
@@ -400,7 +400,7 @@ Ini hanya diperlukan kalau Anda mau **tambah domain baru langsung dari admin pan
 3. Cari bagian **"Catch-all address"** (biasanya paling bawah)
 4. Klik tombol **"Edit"** di sebelah kanannya
 5. Di dropdown "Action" → pilih **"Send to a Worker"**
-6. Di dropdown berikutnya → pilih **"richmail-worker"**
+6. Di dropdown berikutnya → pilih **"skyclub-worker"**
 7. Pastikan toggle statusnya hijau (Active)
 8. Klik **"Save"**
 
@@ -445,7 +445,7 @@ Ini supaya domain tidak hilang saat Render restart.
 ## Struktur Project
 
 ```
-Richmail/
+SkyClub/
 ├── server/
 │   ├── app.js            # Web server + semua API routes
 │   ├── database.js       # Penyimpanan data (JSON file)
@@ -496,16 +496,16 @@ Richmail/
 
 ### Docker (untuk VPS sendiri)
 ```bash
-git clone https://github.com/ramax100/Richmail.git
-cd Richmail
+git clone https://github.com/deadwoodyah/skyclubmail.git
+cd skyclubmail
 # Edit docker-compose.yml sesuai kebutuhan
 docker compose up -d
 ```
 
 ### Manual (lokal/VPS)
 ```bash
-git clone https://github.com/ramax100/Richmail.git
-cd Richmail
+git clone https://github.com/deadwoodyah/skyclubmail.git
+cd skyclubmail
 MAIL_DOMAINS=domainanda.com ADMIN_PASSWORD=passwordanda WEBHOOK_SECRET=secretanda node server/app.js
 ```
 
